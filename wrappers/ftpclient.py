@@ -24,13 +24,15 @@ class FTPClient(object):
         host,
         user="anonymous",
         passwd="anonymous@",
-        timeout=DEFAULT_TIMEOUT
+        timeout=DEFAULT_TIMEOUT,
+        debug_level=None
     ):
         self.host = host
         self.user = user
         self.passwd = passwd
         self.timeout = timeout
         self.logger = logger
+        self.debug_level = debug_level
         self._client = None
 
     def __enter__(self):
@@ -43,6 +45,9 @@ class FTPClient(object):
     def client(self):
         if not self._client:
             self._client = ftplib.FTP(**self.get_connection_params())
+
+            if self.debug_level is not None:
+                self._client.set_debuglevel(self.debug_level)
 
         return self._client
 
