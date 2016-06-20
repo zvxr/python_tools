@@ -76,6 +76,9 @@ def download_file(ftp_client, file_path, dest_path=None, ascii_mode=True):
     `ascii_mode`: Boolean. When True downloads using ASCII mode. False uploads
     using Binary mode.
     """
+    if not isinstance(ftp_client, FTPClient):
+        raise TypeError("ftp_client must be a FTPClient instance.")
+
     # Determine remote file directory and name.
     file_dir, file_name = file_path.rpartition('/')[::2]
 
@@ -111,6 +114,9 @@ def upload_file(ftp_client, file_path, dest_path=None, ascii_mode=True):
     `ascii_mode`: Boolean. When True uploads using ASCII mode. False uploads
     using Binary mode.
     """
+    if not isinstance(ftp_client, FTPClient):
+        raise TypeError("ftp_client must be a FTPClient instance.")
+
     # Make sure the file exists.
     if not os.path.isfile(file_path):
         raise IOError("File does not exist: {0}".format(file_path))
