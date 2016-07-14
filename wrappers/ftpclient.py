@@ -31,7 +31,6 @@ class FTPClient(object):
         self.user = user
         self.passwd = passwd
         self.timeout = timeout
-        self.logger = logger
         self.debug_level = debug_level
         self._client = None
 
