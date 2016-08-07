@@ -6,13 +6,17 @@ import getpass
 import os
 import platform
 
+import classes.ciphers
+
 from Crypto.Cipher import AES
-from Crypto.Cipher import XOR
 from Crypto.Random import random
 
 
+CIPHERS = {
+    'XOR': classes.ciphers.XORCipher
+}
+CIPHER_CHOICES = CIPHERS.values()
 CIPHER_DEFAULT = "XOR"
-CIPHERS = ("XOR",)
 
 PADDING = "".join((chr(i) for i in range(ord('a'), ord('z') + 1)))
 PAD_CHAR = "_"
@@ -72,7 +76,7 @@ def get_data():
             data += raw_input()
             data += "\n"
         except KeyboardInterrupt:
-            break    
+            break
 
     return data.rstrip("\n")
 
@@ -80,23 +84,6 @@ def get_data():
 def get_key():
     """Get and return key using getpass."""
     return getpass.getpass("Please enter key: ")
-
-
-def xor_encrypt(data, key):
-    # Generate cipher, encrypt data and Base64 encode.
-    xor_cipher = XOR.new(key)
-    return base64.b64encode(xor_cipher.encrypt(data))
-
-
-def xor_decrypt(data, key):
-    # Generate cipher, Base64 decode and decrypt data.
-    xor_cipher = XOR.new(key)
-    return xor_cipher.decrypt(base64.b64decode(data))
-
-
-CIPHER_METHODS = {
-    "XOR": (xor_encrypt, xor_decrypt)
-}
 
 
 if __name__ == "__main__":
@@ -108,17 +95,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cipher",
         "-c",
-        choices=CIPHERS,
+        choices=CIPHER_CHOICES,
         default=CIPHER_DEFAULT,
-        help="Cipher to execute. Choices:{}".format(CIPHERS),
+        help="Cipher to execute. Choices:{}".format(CIPHER_CHOICES),
         type=str.upper
     )
 
     parser.add_argument(
         "--clear-on-exit",
-        default=True,
-        help="When True will clear the screen when script completes.",
-        type=bool
+        "-C",
+        action="store_true",
+        help="When True will clear the screen when script completes."
     )
 
     parser.add_argument(
@@ -154,7 +141,13 @@ if __name__ == "__main__":
         args.key = get_key()
 
     # Perform encryption/decryption.
-    meth = CIPHER_METHODS[args.cipher][args.decrypt]
-    print("\nRESPONSE:\n\n{}".format(meth(args.data, args.key)))
+    cipher = CIPHERS[args.cipher](args.key)
+
+    if args.decrypt:
+        response = cipher.decrypt(args.data)
+    else:
+        response = cipher.encrypt(args.data)
+
+    print("\nRESPONSE:\n\n{}".format(response))
 
     raw_input("Press ENTER key or CTRL+C to complete.")
