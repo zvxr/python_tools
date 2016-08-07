@@ -16,6 +16,9 @@ Invalid Words: bee (must contain A and not enough E's), bark (no K)
 
 """
 
+import atexit
+import curses
+
 from collections import defaultdict
 
 
@@ -44,3 +47,19 @@ class Wheel(object):
                 return False
             choices_left.pop(choices_left.index(ch))
         return True
+
+
+class Screen(object):
+    def __init__(self):
+        self.stdscr = curses.initscr()
+        #curses.noecho()
+        atexit.register(self.cleanup)
+
+    def __del__(self):
+        self.cleanup()
+
+    def cleanup(self):
+        self.stdscr.keypad(0)
+        curses.echo();
+        curses.nocbreak()
+        curses.endwin()
