@@ -5,6 +5,7 @@ import base64
 import getpass
 import os
 import platform
+import subprocess
 
 import classes.ciphers
 
@@ -81,9 +82,24 @@ def get_data():
     return data.rstrip("\n")
 
 
+def get_data_from_clipboard():
+    """Returns what is in the clipboard."""
+    process = subprocess.Popen(['pbpaste'], stdout=subprocess.PIPE)
+    return_code = process.wait()
+    return process.stdout.read()
+
+
 def get_key():
     """Get and return key using getpass."""
     return getpass.getpass("Please enter key: ")
+
+
+def store_data_in_clipboard(data):
+    """Store data in clipboard."""
+    process = subprocess.Popen(['pbcopy'], stdin=subprocess.PIPE)
+    process.stdin.write(data)
+    process.stdin.close()
+    return_code = process.wait()
 
 
 if __name__ == "__main__":
@@ -93,12 +109,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--cipher",
+        "--clipboard",
         "-c",
-        choices=CIPHER_CHOICES,
-        default=CIPHER_DEFAULT,
-        help="Cipher to execute. Choices:{}".format(CIPHER_CHOICES),
-        type=str.upper
+        action="store_true",
+        help="Data is pulled/stored in clipboard."
     )
 
     parser.add_argument(
@@ -128,11 +142,23 @@ if __name__ == "__main__":
         help="Key used to encrypt or decrypt. If not provided will be prompted."
     )
 
+    parser.add_argument(
+        "--mode",
+        "-m",
+        choices=CIPHER_CHOICES,
+        default=CIPHER_DEFAULT,
+        help="Cipher to execute. Choices:{}".format(CIPHER_CHOICES),
+        type=str.upper
+    )
+
     args = parser.parse_args()
 
     # Take additional actions based on parser.
     if args.clear_on_exit:
         atexit.register(clear_screen)
+
+    if args.clipboard:
+        args.data = get_data_from_clipboard()
 
     if args.data is None:
         args.data = get_data()
@@ -141,13 +167,19 @@ if __name__ == "__main__":
         args.key = get_key()
 
     # Perform encryption/decryption.
-    cipher = CIPHERS[args.cipher](args.key)
+    cipher = CIPHERS[args.mode](args.key)
 
     if args.decrypt:
         response = cipher.decrypt(args.data)
     else:
         response = cipher.encrypt(args.data)
 
-    print("\nRESPONSE:\n\n{}".format(response))
+    # Store results.
+    if args.clipboard:
+        store_data_in_clipboard(response)
+    else:
+        print("\nRESPONSE:\n\n{}".format(response))
 
-    raw_input("Press ENTER key or CTRL+C to complete.")
+    # Require user acknowledgement before screen clear.
+    if args.clear_on_exit:
+        raw_input("Press ENTER key or CTRL+C to complete.")
