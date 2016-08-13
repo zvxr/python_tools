@@ -16,7 +16,7 @@ from Crypto.Random import random
 CIPHERS = {
     'XOR': classes.ciphers.XORCipher
 }
-CIPHER_CHOICES = CIPHERS.values()
+CIPHER_CHOICES = CIPHERS.keys()
 CIPHER_DEFAULT = "XOR"
 
 PADDING = "".join((chr(i) for i in range(ord('a'), ord('z') + 1)))
@@ -84,9 +84,9 @@ def get_data():
 
 def get_data_from_clipboard():
     """Returns what is in the clipboard."""
-    process = subprocess.Popen(['pbpaste'], stdout=subprocess.PIPE)
-    return_code = process.wait()
-    return process.stdout.read()
+    process = subprocess.Popen(['pbpaste'], stdout=subprocess.PIPE, close_fds=True)
+    stdout, stderr = process.communicate()
+    return stdout.decode('utf-8')
 
 
 def get_key():
@@ -97,9 +97,7 @@ def get_key():
 def store_data_in_clipboard(data):
     """Store data in clipboard."""
     process = subprocess.Popen(['pbcopy'], stdin=subprocess.PIPE)
-    process.stdin.write(data)
-    process.stdin.close()
-    return_code = process.wait()
+    stdoutdata, stderrdata = process.communicate(input=data.encode('utf-8'))
 
 
 if __name__ == "__main__":
@@ -177,6 +175,7 @@ if __name__ == "__main__":
     # Store results.
     if args.clipboard:
         store_data_in_clipboard(response)
+        print("\nRESPONSE has been stored in clipboard.\n\n")
     else:
         print("\nRESPONSE:\n\n{}".format(response))
 
