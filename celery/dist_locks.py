@@ -1,6 +1,8 @@
 
 import redis
 
+from functools import wraps
+
 """This module is meant to provide a distributed locks solution for Celery and Celerybeat.
 When running Celerybeat distributed (for redundancy), each instance will spawn the cron tasks
 specified when loading the app. In many cases, this is undesirable behavior. One solution is
@@ -41,6 +43,7 @@ def distributed_lock(key=DEFAULT_KEY, timeout=DEFAULT_TIMEOUT):
     """
     def _decorator(run_function):
 
+        @wraps(run_function)
         def _caller(*args, **kwargs):
             # Check for `ignore_lock` keyword argument.
             if 'ignore_lock' in kwargs and kwargs['ignore_lock'] == True:

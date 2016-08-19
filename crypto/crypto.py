@@ -19,6 +19,14 @@ CIPHERS = {
 CIPHER_CHOICES = CIPHERS.keys()
 CIPHER_DEFAULT = "XOR"
 
+ENCODINGS = {
+    'base64': (base64.encode, base64.decode),
+    None: (None, None),
+}
+ENCODING_CHOICES = ENCODINGS.keys()
+ENCODING_DEFAULT = "base64"
+
+
 PADDING = "".join((chr(i) for i in range(ord('a'), ord('z') + 1)))
 PAD_CHAR = "_"
 
@@ -132,6 +140,17 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="When True will decrypt data. When False will encrypt data."
+    )
+
+    parser.add_argument(
+        "--encoding",
+        "-e",
+        choices=ENCODING_CHOICES,
+        default=ENCODING_DEFAULT,
+        help="Encoding to apply to encrypted data or data when decrypting. Choices:{}".format(
+            ENCODING_CHOICES
+        ),
+        type=str.upper
     )
 
     parser.add_argument(
