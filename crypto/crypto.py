@@ -20,8 +20,8 @@ CIPHER_CHOICES = CIPHERS.keys()
 CIPHER_DEFAULT = "XOR"
 
 ENCODINGS = {
-    'base64': (base64.encode, base64.decode),
-    None: (None, None),
+    'BASE64': (base64.b64encode, base64.b64decode),
+    'NONE': (None, None),
 }
 ENCODING_CHOICES = ENCODINGS.keys()
 ENCODING_DEFAULT = "base64"
@@ -185,6 +185,9 @@ if __name__ == "__main__":
 
     # Perform encryption/decryption.
     cipher = CIPHERS[args.mode](args.key)
+
+    if args.encoding:
+        cipher.set_encoding(*ENCODINGS[args.encoding])
 
     if args.decrypt:
         response = cipher.decrypt(args.data)
