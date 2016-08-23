@@ -13,8 +13,10 @@ from Crypto.Cipher import AES
 from Crypto.Random import random
 
 
+# Constants.
 CIPHERS = {
-    'XOR': classes.ciphers.XORCipher
+    'XOR': classes.ciphers.XORCipher,
+    'AES': classes.ciphers.AESCipher
 }
 CIPHER_CHOICES = CIPHERS.keys()
 CIPHER_DEFAULT = "XOR"
@@ -27,46 +29,7 @@ ENCODING_CHOICES = ENCODINGS.keys()
 ENCODING_DEFAULT = "base64"
 
 
-PADDING = "".join((chr(i) for i in range(ord('a'), ord('z') + 1)))
-PAD_CHAR = "_"
-
-
-def _aes_cbc_encrypt(data, key):
-    # Generate 256-bit random key and 128-bit random IV.
-    random_device = Random.new()
-    aes_key = random_device.read(32)
-    aes_iv = random_device.read(16)
-
-    # TODO -- this needs to hide the key and iv somewhere.
-
-    # Left pad data with a random character to be exact multiple of 16 bytes.
-    padding_size = (16 - len(data) % 16) - 1
-    pad_char = random.choice(PADDING)
-    padded_data = data.ljust(padding_size, pad_char)
-
-    # Generate cipher, encrypt data and return it Base64 encoded.
-    aes_cipher = AES.new(aes_key, AES.MODE_CBC, aes_iv)
-    return base64.b64encode(aes_cipher.encrypt(padded_data))
-
-
-def aes_ecb_encrypt(data, key):
-    """Apply AES encryption (ECB mode) to `data`, with `key`.
-    `data` and `key` must both be a length of a multiple of 16.
-    """
-    # Pad the data.
-    padded_data = data.ljust(16 - len(data) % 16, PAD_CHAR)
-
-    # Generate cipher, encrypt data and Base64 encode.
-    aes_cipher = AES.new(key, AES.MODE_ECB)
-    return base64.b64encode(aes_cipher.encrypt(padded_data))
-
-
-def aes_ecb_decrypt(data, key):
-    # Generate cipher, Base64 decode and decrypt data.
-    aes_cipher = AES.new(key, AES.MODE_ECB)
-    return aes_cipher.decrypt(base64.b64decode(data))
-
-
+# Methods for command-line use.
 def clear_screen():
     """Executes OS clear screen command."""
     if platform.system() == "Windows":

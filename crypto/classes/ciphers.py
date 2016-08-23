@@ -9,8 +9,6 @@ from Crypto.Cipher import AES, XOR
 # Base Classes.
 class CryptoCipher(object):
     """Base Class for Ciphers."""
-    EncryptedData = namedtuple('EncryptedData', ('data', 'pad_char'))
-
     def __init__(self, key=None):
         self._key = key
         self._encoder = None
@@ -26,7 +24,7 @@ class CryptoCipher(object):
     def key(self):
         if self._key is not None:
             return self._key
-        raise Exception("Key is not set.")
+        raise AttributeError("Key is not set.")
 
     @key.setter
     def key(self, value):
@@ -77,11 +75,31 @@ class BlockCipher(CryptoCipher):
     def iv(self):
         if self._iv is not None:
             return self._iv
-        raise Exception("IV is not set.")
+        raise AttributeError("IV is not set.")
 
     @iv.setter
     def iv(self, value):
         self._iv = value
+
+    def _get_pad_char(self, ignore=None):
+        """Return a random character to pad data that does not match ignore."""
+        random_device = Random.new()
+        while True:
+            char = random_device.read(1)
+            if char != ignore:
+                return char
+
+    def pad_data(self, data, block_size):
+        """Left pad data with a random character. Always add padding."""
+        pad_char = self._get_pad_char(ignore=data[0])
+        pad_size = (block_size - len(data)) % block_size or block_size
+        return (pad_char * pad_size) + data
+
+    def unpad_data(self, data):
+        """Strip padding from data. It is expected that the `pad_data`
+        method (or equivalent) has been applied.
+        """
+        return data.lstrip(data[0])
 
 
 # Child Classes.
@@ -98,7 +116,7 @@ class AESCipher(BlockCipher):
 
     def __init__(self, key=None, iv=None, mode=AES.MODE_CFB):
         super(AESCipher, self).__init__(key, iv)
-        self.mode = mode
+        self._mode = mode
 
     @staticmethod
     def generate_iv():
@@ -119,7 +137,7 @@ class AESCipher(BlockCipher):
     def key(self):
         if self._key is not None:
             return self._key
-        raise Exception("Key is not set.")
+        raise AttributeError("Key is not set.")
 
     @key.setter
     def key(self, value):
@@ -131,58 +149,37 @@ class AESCipher(BlockCipher):
 
     @property
     def mode(self):
-        return self._mode
+        if self._mode is not None:
+            return self._mode
+        raise AttributeError("Mode is not set.")
 
     @mode.setter
     def mode(self, value):
         if value not in AESCipher.SUPPORTED_MODES:
-            raise ValueError("AES mode not supported.")
-
+            raise AttributeError("AES mode not supported.")
         self._mode = value
 
-    def _get_pad_char(self, ignore=None):
-        """Return a random character to pad data that does not match ignore."""
-        random_device = Random.new()
-        while True:
-            char = random_device.read(1)
-            if char != ignore:
-                return char
+    def _get_cipher(self):
+        """Return a Pycrypto AES cipher instance.
+        `key`, `mode` and depending on mode `iv` must be set.
+        """
+        if self.mode in (AES.MODE_ECB, AES.MODE_CTR):
+            return AES.new(self.key, self.mode)
+        return AES.new(self.key, self.mode, self.iv)
 
     def encrypt(self, data):
         """Generate cipher, encrypt, and encode data."""
-        pad_char = self._get_pad_char(data[0] if data else None)
-
-        # Pad data.
-        padded_data = data.rjust(((len(data) / 16) + 1) * 16, pad_char)
-
-        # Instantiate cipher.
-        # TODO: Should support counter for CTR and segment_size for CFB.
-        #       This may warrent subclassing for each mode.
-        if self.mode in (AES.MODE_ECB, AES.MODE_CTR):
-            aes_cipher = AES.new(self.key, self.mode)
-        else:
-            aes_cipher = AES.new(self.key, self.mode, self.iv)
-
+        aes_cipher = self._get_cipher()
+        padded_data = self.pad_data(data, AES.block_size)
         encrypted_data = aes_cipher.encrypt(padded_data)
-        return CryptoCipher(
-            self._encode(encrypted_data),
-            pad_char
-        )
+        return self._encode(encrypted_data)
 
     def decrypt(self, data):
-        """Generate cipher, decode, and decrypt data.
-        Accepts CryptoCipher.EncryptedData instance or string.
-        """
-        if isinstance(data, 'CryptoCipher.EncryptedData'):
-            encrypted_data = data.data
-            pad_char = data.pad_char
-        else:
-            encrypted_data = data.data
-            pad_char = None
-
-        aes_cipher = AES.new(self.key, self.mode, self.iv)
+        """Generate cipher, decode, and decrypt data."""
+        aes_cipher = self._get_cipher()
         decoded_data = self._decode(data)
-        return aes_cipher.decrypt(decoded_data).lstrip(pad_char)
+        decrypted_data = aes_cipher.decrypt(decoded_data)
+        return self.unpad_data(decrypted_data)
 
 
 class XORCipher(CryptoCipher):
@@ -193,13 +190,13 @@ class XORCipher(CryptoCipher):
         super(XORCipher, self).__init__(key)
 
     def encrypt(self, data):
-        """Generate cipher, encrypt and encode data."""
+        """Generate cipher, encrypt, and encode data."""
         xor_cipher = XOR.new(self.key)
         encrypted_data = xor_cipher.encrypt(data)
         return self._encode(encrypted_data)
 
     def decrypt(self, data):
-        """Generate cipher, decode and decrypt data."""
+        """Generate cipher, decode, and decrypt data."""
         xor_cipher = XOR.new(self.key)
         encoded_data = self._decode(data)
         return xor_cipher.decrypt(encoded_data)
